@@ -1,0 +1,83 @@
+// Burst Lines Effect for OBS Studio
+// 中心からの角度で一周を line_count 個の区画に分け、区画ごとに 1 本の線を置く。
+// 線の位置・太さ・内側の端は、区画の番号と時間の段階から求めた乱数で決める。
+// 角度の幅で線を描くため、線は外側ほど太い楔の形になる。
+// OpenGL への変換で失敗しないよう、乱数はビット演算を使わず float の演算だけで作る。
+
+uniform float4x4 ViewProj;
+
+uniform float2 size;          // ソースの幅と高さ (画素)
+uniform float2 center;        // 中心の位置 (画素)
+uniform float line_count;     // 一周あたりの線の数
+uniform float thickness;      // 区画の幅に対する線の太さの割合 (0 から 1)
+uniform float inner_radius;   // 線を描かない中央の範囲の半径 (画素)
+uniform float inner_jitter;   // 線ごとの内側の端のばらつき (画素)
+uniform float taper_length;   // 内側の端から線が最大の太さになるまでの長さ (画素)
+uniform float time_step;      // 線の配置の段階。整数の値で渡す
+uniform float seed;           // 乱数の種
+uniform float4 line_color;    // 線の色。不透明度を a に持つ
+
+struct VertInOut {
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+VertInOut VSDefault(VertInOut v_in)
+{
+    VertInOut v_out;
+    v_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+    v_out.uv  = v_in.uv;
+    return v_out;
+}
+
+// 0 から 1 の乱数。引数が大きいと sin の精度が落ちるため、呼び出し側で値を小さく保つ
+float Hash(float2 p)
+{
+    return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+float4 PSBurst(VertInOut v_in) : TARGET
+{
+    const float TAU = 6.28318530718;
+
+    float2 p = v_in.uv * size - center;
+    float r = length(p);
+
+    // 角度を 0 から line_count の範囲の位置へ変換する
+    float t = (atan2(p.y, p.x) / TAU + 0.5) * line_count;
+    float index = floor(t);
+    float f = t - index;
+
+    // 区画の番号と段階を混ぜて乱数の入力にする。段階は 997 で巡回させ、sin の引数を小さく保つ
+    float2 key = float2(index + seed * 0.618, fmod(time_step, 997.0) + seed);
+    float h_pos = Hash(key);
+    float h_width = Hash(key + float2(17.0, 31.0));
+    float h_start = Hash(key + float2(53.0, 7.0));
+
+    // 区画の中での線の中心。太さの分だけ区画の端から離し、隣の区画で切れないようにする
+    float half_cell = 0.5 * thickness;
+    float line_center = lerp(half_cell, 1.0 - half_cell, h_pos);
+
+    // 区画の幅を画素に直し、線の中心からの距離と線の半分の太さを画素で比べる
+    float cell_px = TAU * r / line_count;
+    float dist_px = abs(f - line_center) * cell_px;
+
+    float start = inner_radius + inner_jitter * h_start;
+    float taper = saturate((r - start) / max(taper_length, 1.0));
+    float half_width_px = half_cell * lerp(0.35, 1.0, h_width) * cell_px * taper;
+
+    // 1 画素の幅で縁をなめらかにする
+    float coverage = saturate(half_width_px - dist_px + 0.5);
+    coverage *= step(start, r);
+
+    return float4(line_color.rgb, line_color.a * coverage);
+}
+
+technique Draw
+{
+    pass
+    {
+        vertex_shader = VSDefault(v_in);
+        pixel_shader  = PSBurst(v_in);
+    }
+}
