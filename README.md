@@ -4,6 +4,8 @@ OBS Studio 向けの、動く集中線を描くシンプルな入力ソースの
 
 A simple input source plugin for OBS Studio that draws animated burst lines.
 
+[配信プラグイン倉庫くん](https://soko-kun.allegromoltov.jp/plugins/allegromoltov/obs-simple-burst-lines) にも掲載しています。 / Also listed on [Plugin Soko-kun](https://soko-kun.allegromoltov.jp/plugins/allegromoltov/obs-simple-burst-lines?lang=en).
+
 ![シンプル集中線のプロパティで設定を変えながら、背景の映像に重ねた集中線が動く様子](docs/images/obs-simple-burst-lines.gif)
 
 ## Features / 機能
