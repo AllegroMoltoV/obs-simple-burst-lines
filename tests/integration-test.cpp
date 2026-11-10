@@ -88,6 +88,7 @@ int scenario_empty_center(Checker &check)
 	const size_t visible = count_visible(image);
 	std::cout << "visible pixels=" << visible << '\n';
 	check.expect(visible > 0, "no lines are drawn with the default settings");
+	burst_test::save_image("empty-center-default", image);
 	// 既定値: 中心 50%・50%、空白 45%、縦横比 1.78
 	expect_empty_center(check, image, 50.0, 50.0, 45.0, 1.78, 0.99);
 	return 0;
@@ -192,20 +193,23 @@ int scenario_settings_update(Checker &check)
 int scenario_animation(Checker &check)
 {
 	// 描き替えの頻度が 0 なら時間が経っても出力は変わらず、正なら変わる
-	const auto observe = [](double rate, Image &before, Image &after) {
+	// before の直後に時間を置かずに immediate を描き、500 ms 後に after を描く。
+	// before と immediate の差は時間の経過によらない差で、immediate と after の差は時間の経過による差である
+	const auto observe = [](double rate, Image &before, Image &immediate, Image &after) {
 		obs_data_t *settings = obs_data_create();
 		obs_data_set_double(settings, "update_rate", rate);
 		obs_source_t *source = burst_test::create_source(settings);
 		obs_data_release(settings);
-		bool ok = source && burst_test::render(source, before);
+		bool ok = source && burst_test::render(source, before) && burst_test::render(source, immediate);
 		// OBS の描画スレッドが video_tick で時間を進める
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		ok = ok && burst_test::render(source, after);
 		obs_source_release(source);
 		return ok;
 	};
-	Image still_before, still_after, moving_before, moving_after;
-	if (!observe(0.0, still_before, still_after) || !observe(12.0, moving_before, moving_after)) {
+	Image still_before, still_immediate, still_after, moving_before, moving_immediate, moving_after;
+	if (!observe(0.0, still_before, still_immediate, still_after) ||
+	    !observe(12.0, moving_before, moving_immediate, moving_after)) {
 		return 2;
 	}
 	const auto count_differences = [](const Image &a, const Image &b) {
@@ -215,6 +219,19 @@ int scenario_animation(Checker &check)
 		}
 		return count;
 	};
+	std::cout << "rate 0: visible first=" << count_visible(still_before)
+		  << " immediate=" << count_visible(still_immediate) << " after 500 ms=" << count_visible(still_after)
+		  << " differing first-immediate=" << count_differences(still_before, still_immediate)
+		  << " immediate-after=" << count_differences(still_immediate, still_after) << '\n';
+	std::cout << "rate 12: differing first-immediate=" << count_differences(moving_before, moving_immediate)
+		  << " immediate-after=" << count_differences(moving_immediate, moving_after) << '\n';
+	burst_test::save_image("animation-rate0-1-first", still_before);
+	burst_test::save_image("animation-rate0-2-immediate", still_immediate);
+	burst_test::save_image("animation-rate0-3-after-500ms", still_after);
+	burst_test::save_difference("animation-rate0-diff-first-immediate", still_before, still_immediate);
+	burst_test::save_difference("animation-rate0-diff-immediate-after", still_immediate, still_after);
+	burst_test::save_image("animation-rate12-1-first", moving_before);
+	burst_test::save_image("animation-rate12-3-after-500ms", moving_after);
 	const bool still_same = still_before.rgba == still_after.rgba;
 	const bool moving_same = moving_before.rgba == moving_after.rgba;
 	std::cout << "unchanged after 500 ms: rate 0=" << still_same << " rate 12=" << moving_same << '\n';

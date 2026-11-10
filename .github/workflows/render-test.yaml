@@ -47,6 +47,8 @@ jobs:
 
       - name: Render burst lines
         run: |
+          New-Item -ItemType Directory -Path test-images | Out-Null
+          $env:BURST_TEST_OUTPUT_DIR = "$PWD\test-images"
           ctest --test-dir build_x64 -C RelWithDebInfo -R d3d11 --output-on-failure 2>&1 | Tee-Object -FilePath render-windows.log
           $failed = $LASTEXITCODE
           $env:PATH = "$PWD\.deps\bin\64bit;$PWD\.deps\obs-deps-2025-07-11-x64\bin;$env:PATH"
@@ -62,7 +64,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: render-windows
-          path: render-windows.log
+          path: |
+            render-windows.log
+            test-images
           if-no-files-found: warn
 
   ubuntu-render:
@@ -99,6 +103,8 @@ jobs:
           bench=$(find "$PWD/build_x86_64" -name 'burst-lines-benchmark' -type f -print -quit)
           gl=$(find /usr/lib -name 'libobs-opengl.so*' -print -quit)
           echo "plugin=${plugin} integration=${integration} bench=${bench} gl=${gl}"
+          mkdir -p test-images
+          export BURST_TEST_OUTPUT_DIR="$PWD/test-images"
           failed=0
           for scenario in ${SCENARIOS}; do
             if xvfb-run -a -s '-screen 0 1280x720x24' "${integration}" "${plugin}" "$PWD/data" "${gl}" \
@@ -118,7 +124,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: render-ubuntu
-          path: render-ubuntu.log
+          path: |
+            render-ubuntu.log
+            test-images
           if-no-files-found: warn
 
   macos-render:
@@ -163,6 +171,8 @@ jobs:
           export DYLD_FRAMEWORK_PATH="$PWD/.deps/Frameworks"
           export DYLD_LIBRARY_PATH="${deps_lib}"
           core="$PWD/.deps/obs-studio-31.1.1/libobs/data"
+          mkdir -p test-images
+          export BURST_TEST_OUTPUT_DIR="$PWD/test-images"
           failed=0
           for scenario in ${=SCENARIOS}; do
             if "${integration}" "${plugin}" "$PWD/data" "${gl}" "${core}" "${scenario}" >> render-macos.log 2>&1; then
@@ -180,5 +190,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: render-macos
-          path: render-macos.log
+          path: |
+            render-macos.log
+            test-images
           if-no-files-found: warn
