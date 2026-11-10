@@ -208,9 +208,21 @@ int scenario_animation(Checker &check)
 	if (!observe(0.0, still_before, still_after) || !observe(12.0, moving_before, moving_after)) {
 		return 2;
 	}
+	const auto count_differences = [](const Image &a, const Image &b) {
+		size_t count = 0;
+		for (size_t i = 0; i + 3 < a.rgba.size() && i + 3 < b.rgba.size(); i += 4) {
+			count += std::memcmp(&a.rgba[i], &b.rgba[i], 4) != 0 ? 1 : 0;
+		}
+		return count;
+	};
 	const bool still_same = still_before.rgba == still_after.rgba;
 	const bool moving_same = moving_before.rgba == moving_after.rgba;
 	std::cout << "unchanged after 500 ms: rate 0=" << still_same << " rate 12=" << moving_same << '\n';
+	std::cout << "rate 0: visible before=" << count_visible(still_before) << " after=" << count_visible(still_after)
+		  << " differing pixels=" << count_differences(still_before, still_after) << '\n';
+	std::cout << "rate 12: visible before=" << count_visible(moving_before)
+		  << " after=" << count_visible(moving_after)
+		  << " differing pixels=" << count_differences(moving_before, moving_after) << '\n';
 	check.expect(still_same, "the lines change although redraws are disabled");
 	check.expect(!moving_same, "the lines do not change at 12 redraws per second");
 	return 0;

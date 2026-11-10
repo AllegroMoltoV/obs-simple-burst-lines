@@ -50,7 +50,8 @@ jobs:
           ctest --test-dir build_x64 -C RelWithDebInfo -R d3d11 --output-on-failure 2>&1 | Tee-Object -FilePath render-windows.log
           $failed = $LASTEXITCODE
           $env:PATH = "$PWD\.deps\bin\64bit;$PWD\.deps\obs-deps-2025-07-11-x64\bin;$env:PATH"
-          & .\build_x64\RelWithDebInfo\burst-lines-benchmark.exe .\build_x64\RelWithDebInfo\simple-burst-lines.dll `
+          # LoadLibrary は相対パスのプラグインを読み込めないため、絶対パスで渡す
+          & "$PWD\build_x64\RelWithDebInfo\burst-lines-benchmark.exe" "$PWD\build_x64\RelWithDebInfo\simple-burst-lines.dll" `
             "$PWD\data" "$PWD\.deps\obs-studio-31.1.1\build_x64\libobs-d3d11\Release\libobs-d3d11.dll" `
             "$PWD\.deps\obs-studio-31.1.1\libobs\data" $env:BENCH_LINE_COUNTS.Split(' ') 2>&1 |
             Tee-Object -FilePath render-windows.log -Append

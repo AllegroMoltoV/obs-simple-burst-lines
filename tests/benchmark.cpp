@@ -127,7 +127,9 @@ int main(int argc, char **argv)
 		const double frame = source ? median_of_repeats(source) : -1.0;
 		std::cout << argv[i] << ',' << obs_source_get_width(source) << ',' << obs_source_get_height(source)
 			  << ',' << frame << ',' << baseline << ',' << (frame - baseline) << '\n';
-		if (frame < 0.0) {
+		// 1920x1080 を 60 フレーム描いて 0 になることはない。0 以下はタイムスタンプが取れなかったことを示す
+		if (frame <= 0.0) {
+			std::cerr << "GPU timestamps are unavailable on this graphics backend\n";
 			exit_code = 1;
 		}
 		obs_source_release(source);
