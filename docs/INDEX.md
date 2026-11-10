@@ -9,6 +9,7 @@ context compaction で文脈が失われた場合は、この索引から必要�
 | 調査レポート | `docs/reports/` |
 | 名前の重複、OBS 本体の表示と非表示の機能、drop-shadow の流用元、手元の環境 | `docs/reports/2026-11-10-initial-survey.md` |
 | 依頼者のユーザーテストのフィードバックの記録 | `docs/reports/2026-11-10-user-test-feedback.md` |
+| 描画の統合テストの内容と結果、1920×1080 の GPU 時間の測定値 | `docs/reports/2026-11-10-render-tests-and-gpu-time.md` |
 | 依頼者向けの手順書 (git 管理外) | `.prompts/MANUALS/` |
 | ロゴの元の SVG と 512×512 の PNG | `docs/images/logo.svg`、`docs/images/logo.png` |
 | 操作の様子の GIF。依頼者が ScreenToGif で収録し、幅 640 px・32 色に縮めたもの | `docs/images/obs-simple-burst-lines.gif` |
