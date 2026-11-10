@@ -60,31 +60,58 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${PLUGIN_SOURCES} ${PLUGIN
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 
-# エフェクトが D3D11 と OpenGL の両方で読み込めて線が描かれることを確かめる。画素の詳しい検査は統合テストで行う
-if(WIN32)
-  add_executable(render-smoke-test tests/render-smoke-test.cpp)
-  target_compile_features(render-smoke-test PRIVATE cxx_std_17)
-  target_link_libraries(render-smoke-test PRIVATE OBS::libobs)
-  add_dependencies(render-smoke-test ${CMAKE_PROJECT_NAME})
+# 描画のテスト用の実行ファイル。Windows では常にビルドし、macOS と Linux では CI の描画検証 (render-test.yaml) で有効にする
+# - burst-lines-integration-test: 集中線の出力画素を検査する統合テスト
+# - burst-lines-benchmark: 1920x1080 の GPU 時間を測る。環境で値が変わるため CTest には登録しない
+option(ENABLE_RENDER_TESTS "Build the render tests and benchmark on macOS and Linux" OFF)
+if(WIN32 OR ENABLE_RENDER_TESTS)
+  add_executable(burst-lines-integration-test tests/integration-test.cpp)
+  add_executable(burst-lines-benchmark tests/benchmark.cpp)
+  foreach(_test_target IN ITEMS burst-lines-integration-test burst-lines-benchmark)
+    target_compile_features(${_test_target} PRIVATE cxx_std_17)
+    target_link_libraries(${_test_target} PRIVATE OBS::libobs)
+    add_dependencies(${_test_target} ${CMAKE_PROJECT_NAME})
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      find_package(X11 REQUIRED)
+      target_link_libraries(${_test_target} PRIVATE X11::X11)
+    endif()
+  endforeach()
+endif()
 
+if(WIN32)
   enable_testing()
-  # OpenGL の DLL は cmake --build .deps/obs-studio-31.1.1/build_x64 --config Release --target libobs-opengl で作る
+
+  # 統合テストを D3D11 と OpenGL の両方で実行する。グラフィックスの DLL は OBS のビルドで
+  # cmake --build .deps/obs-studio-31.1.1/build_x64 --config Release --target libobs-d3d11 libobs-opengl を実行して作る
   set(_obs_build "${CMAKE_CURRENT_SOURCE_DIR}/.deps/obs-studio-31.1.1/build_x64")
   set(_graphics_d3d11 "${_obs_build}/libobs-d3d11/Release/libobs-d3d11.dll")
   set(_graphics_opengl "${_obs_build}/libobs-opengl/Release/libobs-opengl.dll")
+  set(
+    _scenarios
+    empty-center
+    empty-center-shape
+    color
+    opacity
+    settings-update
+    animation
+    custom-size
+  )
   foreach(_backend IN ITEMS d3d11 opengl)
-    add_test(
-      NAME burst-lines-${_backend}-smoke
-      COMMAND
-        render-smoke-test "$<TARGET_FILE:${CMAKE_PROJECT_NAME}>" "${CMAKE_CURRENT_SOURCE_DIR}/data"
-        "${_graphics_${_backend}}" "${CMAKE_CURRENT_SOURCE_DIR}/.deps/obs-studio-31.1.1/libobs/data"
-    )
-    set_tests_properties(
-      burst-lines-${_backend}-smoke
-      PROPERTIES
-        ENVIRONMENT_MODIFICATION
-          "PATH=path_list_prepend:${CMAKE_CURRENT_SOURCE_DIR}/.deps/bin/64bit;PATH=path_list_prepend:${CMAKE_CURRENT_SOURCE_DIR}/.deps/obs-deps-2025-07-11-x64/bin"
-    )
+    foreach(_scenario IN LISTS _scenarios)
+      set(_test_name burst-lines-${_backend}-${_scenario})
+      add_test(
+        NAME ${_test_name}
+        COMMAND
+          burst-lines-integration-test "$<TARGET_FILE:${CMAKE_PROJECT_NAME}>" "${CMAKE_CURRENT_SOURCE_DIR}/data"
+          "${_graphics_${_backend}}" "${CMAKE_CURRENT_SOURCE_DIR}/.deps/obs-studio-31.1.1/libobs/data" ${_scenario}
+      )
+      set_tests_properties(
+        ${_test_name}
+        PROPERTIES
+          ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:${CMAKE_CURRENT_SOURCE_DIR}/.deps/bin/64bit;PATH=path_list_prepend:${CMAKE_CURRENT_SOURCE_DIR}/.deps/obs-deps-2025-07-11-x64/bin"
+      )
+    endforeach()
   endforeach()
 endif()
 
