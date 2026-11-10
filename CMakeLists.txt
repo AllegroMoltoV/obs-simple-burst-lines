@@ -115,6 +115,23 @@ if(WIN32)
   endforeach()
 endif()
 
+# 通常の導入の検証 (verify-obs-install.yaml) で OBS に読み込ませる検査用のモジュール
+option(ENABLE_INSTALL_PROBE "Build the normal-install frontend verification module" OFF)
+if(WIN32 AND ENABLE_INSTALL_PROBE)
+  find_package(obs-frontend-api REQUIRED)
+  find_package(Qt6 REQUIRED COMPONENTS Widgets)
+  add_library(burst-lines-install-probe MODULE tests/install-probe.cpp)
+  target_compile_features(burst-lines-install-probe PRIVATE cxx_std_17)
+  target_link_libraries(burst-lines-install-probe PRIVATE OBS::libobs OBS::obs-frontend-api Qt6::Widgets)
+  set_target_properties(
+    burst-lines-install-probe
+    PROPERTIES
+      PREFIX ""
+      LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/install-probe"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/install-probe"
+  )
+endif()
+
 # ビルド直後に cmake --install を実行する (Windows 開発用)
 option(ENABLE_POST_BUILD_INSTALL "Run cmake --install after build" ON)
 
