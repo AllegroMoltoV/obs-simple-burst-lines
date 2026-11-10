@@ -6,16 +6,19 @@
 
 uniform float4x4 ViewProj;
 
-uniform float2 size;          // ソースの幅と高さ (画素)
-uniform float2 center;        // 中心の位置 (画素)
-uniform float line_count;     // 一周あたりの線の数
-uniform float thickness;      // 区画の幅に対する線の太さの割合 (0 から 1)
-uniform float inner_radius;   // 線を描かない中央の範囲の半径 (画素)
-uniform float inner_jitter;   // 線ごとの内側の端のばらつき (画素)
-uniform float taper_length;   // 内側の端から線が最大の太さになるまでの長さ (画素)
-uniform float time_step;      // 線の配置の段階。整数の値で渡す
-uniform float seed;           // 乱数の種
-uniform float4 line_color;    // 線の色。不透明度を a に持つ
+uniform float2 size;           // ソースの幅と高さ (画素)
+uniform float2 center;         // 中心の位置 (画素)
+uniform float line_count;      // 一周あたりの線の数
+uniform float spacing_jitter;  // 区画の中での線の位置のばらつき (0 で等間隔、1 で区画いっぱい)
+uniform float thickness;       // 区画の幅に対する線の太さの割合 (0 から 1)
+uniform float taper_length;    // 内側の端から線が最大の太さになるまでの長さ (画素)
+uniform float inner_radius;    // 線を描かない中央の楕円の大きさ (画素。縦横比 1 のときの半径)
+uniform float2 inner_scale;    // 楕円の横と縦の倍率。積が 1 になるよう呼び出し側で求める
+uniform float inner_softness;  // 空白の縁で線を消す幅 (画素)
+uniform float length_jitter;   // 線ごとの内側の端のばらつき (画素)
+uniform float time_step;       // 線の配置の段階。整数の値で渡す
+uniform float seed;            // 乱数の種
+uniform float4 line_color;     // 線の色。不透明度を a に持つ
 
 struct VertInOut {
     float4 pos : POSITION;
@@ -42,6 +45,8 @@ float4 PSBurst(VertInOut v_in) : TARGET
 
     float2 p = v_in.uv * size - center;
     float r = length(p);
+    // 楕円の空白を判定するための距離。楕円の上で inner_radius と等しくなる
+    float e = length(p / inner_scale);
 
     // 角度を 0 から line_count の範囲の位置へ変換する
     float t = (atan2(p.y, p.x) / TAU + 0.5) * line_count;
@@ -56,19 +61,20 @@ float4 PSBurst(VertInOut v_in) : TARGET
 
     // 区画の中での線の中心。太さの分だけ区画の端から離し、隣の区画で切れないようにする
     float half_cell = 0.5 * thickness;
-    float line_center = lerp(half_cell, 1.0 - half_cell, h_pos);
+    float line_center = lerp(0.5, lerp(half_cell, 1.0 - half_cell, h_pos), spacing_jitter);
 
     // 区画の幅を画素に直し、線の中心からの距離と線の半分の太さを画素で比べる
     float cell_px = TAU * r / line_count;
     float dist_px = abs(f - line_center) * cell_px;
 
-    float start = inner_radius + inner_jitter * h_start;
-    float taper = saturate((r - start) / max(taper_length, 1.0));
+    float start = inner_radius + length_jitter * h_start;
+    float taper = saturate((e - start) / max(taper_length, 1.0));
     float half_width_px = half_cell * lerp(0.35, 1.0, h_width) * cell_px * taper;
 
     // 1 画素の幅で縁をなめらかにする
     float coverage = saturate(half_width_px - dist_px + 0.5);
-    coverage *= step(start, r);
+    // 空白の縁で線を徐々に消す。幅が 0 のときは内側の端で切る
+    coverage *= saturate((e - start) / max(inner_softness, 0.0001));
 
     return float4(line_color.rgb, line_color.a * coverage);
 }

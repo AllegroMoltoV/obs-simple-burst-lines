@@ -8,6 +8,7 @@ context compaction で文脈が失われた場合は、この索引から必要�
 | 要件と初回セットアップの指示 | `.prompts/INIT.md` |
 | 調査レポート | `docs/reports/` |
 | 名前の重複、OBS 本体の表示と非表示の機能、drop-shadow の流用元、手元の環境 | `docs/reports/2026-11-10-initial-survey.md` |
+| ユーザーテストの手順と、依頼者のフィードバックの記録 | `docs/reports/2026-11-10-user-test-feedback.md` |
 | 実行ログ (生の出力。git 追跡対象外) | `.logs/` |
 | 実行ログ (残す価値があると判断したもの) | `docs/logs/` |
 | 計画と決定事項 (Beads 使用時の正本) | `bd show <親課題>` |
