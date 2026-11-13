@@ -1,4 +1,4 @@
-# Simple Burst Lines Plugin for OBS Studio
+# シンプル集中線 / Simple Burst Lines
 
 OBS Studio 向けの、動く集中線を描くシンプルな入力ソースのプラグインです。
 
