@@ -1,4 +1,4 @@
-# Simple Burst Lines Plugin for OBS Studio
+# シンプル集中線 / Simple Burst Lines
 
 OBS Studio 向けの、動く集中線を描くシンプルな入力ソースのプラグインです。
 
@@ -168,6 +168,10 @@ GPL-2.0 License
 AllegroMoltoV - https://www.allegromoltov.jp
 
 ## Changelog / 更新情報
+
+### v1.0.2
+
+- 配信プラグイン倉庫くんに表示名と載せる OS を伝える宣言ファイル (.soko-kun/config.json) を足しました。macOS と Linux の配布物は動作を確かめていないため、倉庫くんには Windows の配布物だけを載せます。README の題名から OBS を外しました。リポジトリの名前を obs-simple-burst-lines から simple-burst-lines に変えました。プラグインの動作は v1.0.1 と同じです。
 
 ### v1.0.1 (2026-11-13)
 
